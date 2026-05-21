@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-border: #334155;
+  --color-muted: #94a3b8;
+  --color-foreground: #f1f5f9;
+  --color-accent: #10b981;
+  --color-accent-hover: #059669;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+.glow-accent {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.15);
+}
+
+.glow-primary {
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.15);
+}
+
+.glass {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+@media print {
+  aside,
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+  #invoice-print {
+    color: black !important;
+  }
+}

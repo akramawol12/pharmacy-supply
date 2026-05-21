@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  CLIENT
+  SUPPLIER
+}
+
+enum OrderType {
+  WHOLESALE
+  RETAIL
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+}
+
+model User {
+  id                       String    @id @default(cuid())
+  email                    String    @unique
+  passwordHash             String
+  name                     String
+  role                     Role
+  emailVerifiedAt          DateTime?
+  verificationToken        String?
+  verificationTokenExpires DateTime?
+  clientId                 String?   @unique
+  client                   Client?   @relation(fields: [clientId], references: [id])
+  supplierId               String?   @unique
+  supplier                 Supplier? @relation(fields: [supplierId], references: [id])
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  ordersCreated            Order[]   @relation("CreatedBy")
+  purchases                Purchase[] @relation("ReceivedBy")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("wholesale")
+  phone     String?
+  email     String?
+  address   String?
+  user      User?
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Supplier {
+  id        String     @id @default(cuid())
+  name      String
+  contact   String?
+  address   String?
+  phone     String?
+  email     String?
+  user      User?
+  medicines Medicine[]
+  purchases Purchase[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Medicine {
+  id                String       @id @default(cuid())
+  name              String
+  category          String?
+  manufacturer      String?
+  retailPrice       Float
+  wholesalePrice    Float
+  stockQuantity     Int          @default(0)
+  expiryDate        DateTime?
+  lowStockThreshold Int          @default(10)
+  supplierId        String?
+  supplier          Supplier?    @relation(fields: [supplierId], references: [id])
+  orderItems        OrderItem[]
+  purchases         Purchase[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([supplierId])
+  @@index([name])
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id])
+  walkInName   String?
+  orderType    OrderType
+  totalAmount  Float       @default(0)
+  status       OrderStatus @default(PENDING)
+  createdById  String?
+  createdBy    User?       @relation("CreatedBy", fields: [createdById], references: [id])
+  items        OrderItem[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  subtotal   Float
+
+  @@index([orderId])
+}
+
+model Purchase {
+  id               String   @id @default(cuid())
+  supplierId       String
+  supplier         Supplier @relation(fields: [supplierId], references: [id])
+  medicineId       String
+  medicine         Medicine @relation(fields: [medicineId], references: [id])
+  quantityReceived Int
+  costPrice        Float
+  purchaseDate     DateTime @default(now())
+  receivedById     String?
+  receivedBy       User?    @relation("ReceivedBy", fields: [receivedById], references: [id])
+  createdAt        DateTime @default(now())
+
+  @@index([supplierId])
+  @@index([purchaseDate])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  details   String?
+  userId    String?
+  userName  String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
