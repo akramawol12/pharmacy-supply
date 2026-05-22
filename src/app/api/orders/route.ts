@@ -74,6 +74,12 @@ export async function POST(req: Request) {
     if (!med) {
       return NextResponse.json({ error: `Medicine ${item.medicineId} not found` }, { status: 400 });
     }
+    if (med.expiryDate && med.expiryDate < new Date()) {
+      return NextResponse.json(
+        { error: `${med.name} is expired and cannot be sold` },
+        { status: 400 }
+      );
+    }
     if (med.stockQuantity < item.quantity) {
       return NextResponse.json(
         { error: `Insufficient stock for ${med.name}` },
@@ -126,6 +132,16 @@ export async function POST(req: Request) {
         data: { stockQuantity: { decrement: item.quantity } },
       });
     }
+
+    await tx.orderStatusEvent.create({
+      data: {
+        orderId: created.id,
+        status: OrderStatus.PENDING,
+        note: "Order placed",
+        userId: session.user.id,
+        userName: session.user.name ?? undefined,
+      },
+    });
 
     return created;
   });

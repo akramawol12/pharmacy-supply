@@ -7,6 +7,8 @@ import {
   Users,
   Building2,
   Bell,
+  BarChart3,
+  History,
   Pill,
   Boxes,
   ClipboardList,
@@ -27,6 +29,8 @@ const staffNav: NavItem[] = [
   { href: "/purchases", label: "Purchases", icon: Truck },
   { href: "/suppliers", label: "Suppliers", icon: Building2 },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/activity", label: "Activity", icon: History },
 ];
 
 const adminNav: NavItem[] = [

@@ -9,6 +9,7 @@ export type InvoiceOrder = {
   orderType: string;
   totalAmount: number;
   status: string;
+  paymentStatus?: string;
   createdAt: string;
   walkInName: string | null;
   client: { name: string } | null;
@@ -70,6 +71,16 @@ export function InvoiceModal({
             <div>
               <p className="text-muted">Type</p>
               <p className="font-bold capitalize">{order.orderType.toLowerCase()}</p>
+            </div>
+            <div>
+              <p className="text-muted">Payment</p>
+              <p className="font-bold capitalize">
+                {(order.paymentStatus ?? "UNPAID").toLowerCase()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted">Order status</p>
+              <p className="font-bold capitalize">{order.status.toLowerCase()}</p>
             </div>
           </div>
 

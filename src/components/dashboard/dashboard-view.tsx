@@ -75,7 +75,7 @@ export function DashboardView({ stats }: { stats: DashboardStats }) {
   ];
 
   return (
-    <div className="mt-8 space-y-8">
+    <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((c) => (
           <Card key={c.title} className="glow-accent">

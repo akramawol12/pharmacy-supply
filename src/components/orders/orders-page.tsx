@@ -7,9 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { InvoiceModal, type InvoiceOrder } from "@/components/invoice/invoice-modal";
-import { FileText } from "lucide-react";
+import { OrderTimeline } from "./order-timeline";
+import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 type Order = {
   id: string;
@@ -17,10 +19,17 @@ type Order = {
   orderType: string;
   totalAmount: number;
   status: string;
+  paymentStatus: string;
   walkInName: string | null;
   createdAt: string;
   client: { name: string } | null;
   retailer: { name: string } | null;
+  statusEvents: {
+    status: string;
+    note: string | null;
+    userName: string | null;
+    createdAt: string;
+  }[];
   items: {
     quantity: number;
     unitPrice: number;
@@ -41,21 +50,34 @@ export function OrdersPage({
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<InvoiceOrder | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lines, setLines] = useState<{ medicineId: string; quantity: number }[]>([
     { medicineId: "", quantity: 1 },
   ]);
 
-  async function updateStatus(id: string, status: string) {
+  async function patchOrder(id: string, body: Record<string, string>) {
     const res = await fetch(`/api/orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
-      toast.success(`Order marked as ${status.toLowerCase()}`);
       router.refresh();
-    } else {
-      toast.error("Failed to update order");
+      return true;
+    }
+    toast.error("Update failed");
+    return false;
+  }
+
+  async function updateStatus(id: string, status: string) {
+    if (await patchOrder(id, { status })) {
+      toast.success(`Order marked as ${status.toLowerCase()}`);
+    }
+  }
+
+  async function markPaid(id: string) {
+    if (await patchOrder(id, { paymentStatus: "PAID" })) {
+      toast.success("Marked as paid");
     }
   }
 
@@ -89,6 +111,12 @@ export function OrdersPage({
     CONFIRMED: "confirmed",
     FULFILLED: "fulfilled",
     CANCELLED: "cancelled",
+  };
+
+  const paymentMap: Record<string, "pending" | "confirmed" | "fulfilled" | "cancelled"> = {
+    UNPAID: "pending",
+    PARTIAL: "confirmed",
+    PAID: "fulfilled",
   };
 
   return (
@@ -157,55 +185,90 @@ export function OrdersPage({
       )}
 
       <div className="mt-6 space-y-4">
-        {initialOrders.map((o) => (
-          <Card key={o.id}>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="font-bold">{o.orderNumber}</p>
-                <p className="text-sm text-muted">
-                  {o.client?.name ?? o.retailer?.name ?? o.walkInName ?? "Walk-in"} · {o.orderType} ·{" "}
-                  {formatDate(o.createdAt)}
-                </p>
-                <ul className="mt-2 text-sm text-muted">
-                  {o.items.map((it, i) => (
-                    <li key={i}>
-                      {it.medicine.name} × {it.quantity} @ {formatCurrency(it.unitPrice)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="text-right">
-                <p className="text-xl font-bold text-accent">{formatCurrency(o.totalAmount)}</p>
-                <Badge status={statusMap[o.status] ?? "pending"}>{o.status.toLowerCase()}</Badge>
-                <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    className="text-xs px-2 py-1"
-                    onClick={() => setInvoiceOrder(o)}
-                  >
-                    <FileText className="h-3 w-3" />
-                    Invoice
-                  </Button>
-                  {o.status === "PENDING" && (
-                    <Button variant="primary" className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "CONFIRMED")}>
-                      Confirm
+        {initialOrders.length === 0 && (
+          <EmptyState
+            title="No orders yet"
+            description="Create a manual sale or wait for client portal orders."
+            actionLabel="New sale order"
+            actionHref="#"
+          />
+        )}
+        {initialOrders.map((o) => {
+          const expanded = expandedId === o.id;
+          return (
+            <Card key={o.id}>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold">{o.orderNumber}</p>
+                  <p className="text-sm text-muted">
+                    {o.client?.name ?? o.retailer?.name ?? o.walkInName ?? "Walk-in"} · {o.orderType} ·{" "}
+                    {formatDate(o.createdAt)}
+                  </p>
+                  <ul className="mt-2 text-sm text-muted">
+                    {o.items.map((it, i) => (
+                      <li key={i}>
+                        {it.medicine.name} × {it.quantity} @ {formatCurrency(it.unitPrice)}
+                      </li>
+                    ))}
+                  </ul>
+                  {expanded && <OrderTimeline events={o.statusEvents} />}
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-bold text-accent">{formatCurrency(o.totalAmount)}</p>
+                  <div className="flex flex-wrap gap-1 justify-end mt-1">
+                    <Badge status={statusMap[o.status] ?? "pending"}>{o.status.toLowerCase()}</Badge>
+                    <Badge status={paymentMap[o.paymentStatus] ?? "pending"}>
+                      {o.paymentStatus.toLowerCase()}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 justify-end">
+                    <Button
+                      variant="ghost"
+                      className="text-xs px-2 py-1"
+                      onClick={() => setExpandedId(expanded ? null : o.id)}
+                    >
+                      {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      Timeline
                     </Button>
-                  )}
-                  {(o.status === "PENDING" || o.status === "CONFIRMED") && (
-                    <Button className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "FULFILLED")}>
-                      Fulfill
+                    <Button
+                      variant="ghost"
+                      className="text-xs px-2 py-1"
+                      onClick={() =>
+                        setInvoiceOrder({
+                          ...o,
+                          paymentStatus: o.paymentStatus,
+                        })
+                      }
+                    >
+                      <FileText className="h-3 w-3" />
+                      Invoice
                     </Button>
-                  )}
-                  {o.status !== "CANCELLED" && o.status !== "FULFILLED" && (
-                    <Button variant="danger" className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "CANCELLED")}>
-                      Cancel
-                    </Button>
-                  )}
+                    {o.paymentStatus !== "PAID" && o.status === "FULFILLED" && (
+                      <Button className="text-xs px-2 py-1" onClick={() => markPaid(o.id)}>
+                        Mark paid
+                      </Button>
+                    )}
+                    {o.status === "PENDING" && (
+                      <Button variant="primary" className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "CONFIRMED")}>
+                        Confirm
+                      </Button>
+                    )}
+                    {(o.status === "PENDING" || o.status === "CONFIRMED") && (
+                      <Button className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "FULFILLED")}>
+                        Fulfill
+                      </Button>
+                    )}
+                    {o.status !== "CANCELLED" && o.status !== "FULFILLED" && (
+                      <Button variant="danger" className="text-xs px-2 py-1" onClick={() => updateStatus(o.id, "CANCELLED")}>
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

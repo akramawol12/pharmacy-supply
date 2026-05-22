@@ -28,6 +28,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
 model User {
   id                       String    @id @default(cuid())
   email                    String    @unique
@@ -120,16 +126,35 @@ model Order {
   walkInName   String?
   orderType    OrderType
   totalAmount  Float       @default(0)
-  status       OrderStatus @default(PENDING)
-  createdById  String?
-  createdBy    User?       @relation("CreatedBy", fields: [createdById], references: [id])
-  items        OrderItem[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  status         OrderStatus   @default(PENDING)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  paidAt         DateTime?
+  internalNotes  String?
+  createdById    String?
+  createdBy      User?             @relation("CreatedBy", fields: [createdById], references: [id])
+  items          OrderItem[]
+  statusEvents   OrderStatusEvent[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@index([clientId])
   @@index([retailerId])
   @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderStatusEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  userId    String?
+  userName  String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
   @@index([createdAt])
 }
 

@@ -18,6 +18,7 @@ export const getOrders = cache(
         include: { medicine: { select: { name: true } } },
       },
       createdBy: { select: { name: true } },
+      statusEvents: { orderBy: { createdAt: "asc" } },
     },
     orderBy: { createdAt: "desc" },
     take: 200,
@@ -26,6 +27,11 @@ export const getOrders = cache(
   return orders.map((o) => ({
     ...o,
     createdAt: o.createdAt.toISOString(),
+    paidAt: o.paidAt?.toISOString() ?? null,
+    statusEvents: o.statusEvents.map((e) => ({
+      ...e,
+      createdAt: e.createdAt.toISOString(),
+    })),
     items: o.items.map((it) => ({
       ...it,
       medicine: it.medicine,

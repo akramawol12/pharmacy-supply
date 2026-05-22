@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Activity } from "lucide-react";
@@ -39,6 +40,9 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
         ))}
         {items.length === 0 && <p className="text-sm text-muted">No activity yet</p>}
       </ul>
+      <Link href="/activity" className="mt-4 block text-center text-xs text-accent hover:underline">
+        View full activity log →
+      </Link>
     </Card>
   );
 }

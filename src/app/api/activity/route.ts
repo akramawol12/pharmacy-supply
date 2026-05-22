@@ -9,7 +9,7 @@ export async function GET() {
 
   const activities = await prisma.activityLog.findMany({
     orderBy: { createdAt: "desc" },
-    take: 30,
+    take: 100,
   });
 
   return NextResponse.json(activities);

@@ -29,6 +29,8 @@ export const STAFF_ROUTES = [
   "/retailers",
   "/suppliers",
   "/alerts",
+  "/reports",
+  "/activity",
 ];
 
 export const CLIENT_ROUTES = ["/catalog", "/cart", "/my-orders"];

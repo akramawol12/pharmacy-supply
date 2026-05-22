@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession, unauthorized, forbidden, hasRole, ADMIN_STAFF } from "@/lib/auth-helpers";
 import { logActivity } from "@/lib/activity";
-import { OrderStatus } from "@prisma/client";
+import { recordOrderStatusEvent } from "@/lib/order-events";
+import { sendOrderStatusEmail } from "@/lib/email/order-notify";
+import { formatCurrency } from "@/lib/utils";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { z } from "zod";
 
 const updateSchema = z.object({
-  status: z.enum(["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"]),
+  status: z.enum(["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED"]).optional(),
+  paymentStatus: z.enum(["UNPAID", "PARTIAL", "PAID"]).optional(),
+  internalNotes: z.string().max(500).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -23,13 +28,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const existing = await prisma.order.findUnique({
     where: { id },
-    include: { items: true },
+    include: {
+      items: true,
+      client: { select: { email: true, name: true } },
+      retailer: { select: { email: true, name: true } },
+    },
   });
   if (!existing) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  const newStatus = parsed.data.status as OrderStatus;
+  const newStatus = parsed.data.status as OrderStatus | undefined;
+  const newPayment = parsed.data.paymentStatus as PaymentStatus | undefined;
 
   const order = await prisma.$transaction(async (tx) => {
     if (newStatus === OrderStatus.CANCELLED && existing.status !== OrderStatus.CANCELLED) {
@@ -43,23 +53,65 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return tx.order.update({
       where: { id },
-      data: { status: newStatus },
+      data: {
+        ...(newStatus ? { status: newStatus } : {}),
+        ...(newPayment
+          ? {
+              paymentStatus: newPayment,
+              paidAt: newPayment === PaymentStatus.PAID ? new Date() : null,
+            }
+          : {}),
+        ...(parsed.data.internalNotes !== undefined
+          ? { internalNotes: parsed.data.internalNotes }
+          : {}),
+      },
       include: {
         items: { include: { medicine: true } },
         client: true,
-        createdBy: { select: { name: true } },
+        retailer: true,
+        statusEvents: { orderBy: { createdAt: "asc" } },
       },
     });
   });
 
-  await logActivity({
-    action: "updated",
-    entity: "order",
-    entityId: order.id,
-    details: `${order.orderNumber} → ${newStatus}`,
-    userId: session.user.id,
-    userName: session.user.name ?? undefined,
-  });
+  if (newStatus && newStatus !== existing.status) {
+    await recordOrderStatusEvent({
+      orderId: order.id,
+      status: newStatus,
+      userId: session.user.id,
+      userName: session.user.name ?? undefined,
+    });
+
+    await logActivity({
+      action: "status_changed",
+      entity: "order",
+      entityId: order.id,
+      details: `${order.orderNumber} → ${newStatus}`,
+      userId: session.user.id,
+      userName: session.user.name ?? undefined,
+    });
+
+    const notifyEmail = existing.client?.email ?? existing.retailer?.email;
+    if (notifyEmail) {
+      await sendOrderStatusEmail({
+        to: notifyEmail,
+        orderNumber: order.orderNumber,
+        status: newStatus,
+        totalAmount: formatCurrency(order.totalAmount),
+      });
+    }
+  }
+
+  if (newPayment && newPayment !== existing.paymentStatus) {
+    await logActivity({
+      action: "payment_updated",
+      entity: "order",
+      entityId: order.id,
+      details: `${order.orderNumber} → ${newPayment}`,
+      userId: session.user.id,
+      userName: session.user.name ?? undefined,
+    });
+  }
 
   return NextResponse.json(order);
 }
