@@ -1,14 +1,15 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Pill, Building2, Users, Briefcase, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { DEMO_ACCOUNTS } from "@/config/app";
+import { DEMO_ACCOUNTS, ROLE_HOME } from "@/config/app";
 import { cn } from "@/lib/utils";
+import type { Role } from "@prisma/client";
 
 type LoginTab = "internal" | "client" | "retailer" | "supplier";
 
@@ -27,7 +28,6 @@ const TAB_DEFAULTS: Record<LoginTab, { email: string; password: string }> = {
 };
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<LoginTab>("internal");
   const [error, setError] = useState("");
@@ -41,43 +41,43 @@ export default function LoginPage() {
     setInfo("");
 
     const form = new FormData(e.currentTarget);
-    const email = form.get("email") as string;
+    const email = (form.get("email") as string).trim().toLowerCase();
     const password = form.get("password") as string;
 
-    const check = await fetch("/api/auth/check-credentials", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await check.json();
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (!data.ok) {
-      setLoading(false);
-      if (data.code === "EMAIL_NOT_VERIFIED") {
-        setError(data.message);
-        setInfo("Use the link sent to your email, or resend below.");
-      } else {
-        setError(data.message ?? "Invalid email or password");
+      if (!res?.ok || res.error) {
+        const check = await fetch("/api/auth/check-credentials", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await check.json();
+        if (data.code === "EMAIL_NOT_VERIFIED") {
+          setError(data.message);
+          setInfo("Use the link sent to your email, or resend below.");
+        } else {
+          setError(data.message ?? "Invalid email or password");
+        }
+        return;
       }
-      return;
-    }
 
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+      const session = await fetch("/api/auth/session").then((r) => r.json());
+      const role = session?.user?.role as Role | undefined;
+      const dest =
+        searchParams.get("callbackUrl") ?? (role ? ROLE_HOME[role] : "/dashboard");
 
-    setLoading(false);
-
-    if (res?.error) {
+      window.location.href = dest;
+    } catch {
       setError("Sign-in failed. Please try again.");
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const dest = searchParams.get("callbackUrl") ?? data.redirectTo ?? "/dashboard";
-    router.push(dest);
-    router.refresh();
   }
 
   async function resendVerification() {
