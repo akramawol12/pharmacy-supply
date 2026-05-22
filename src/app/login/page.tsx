@@ -3,24 +3,26 @@
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { Pill, Building2, Users, Briefcase } from "lucide-react";
+import { Pill, Building2, Users, Briefcase, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DEMO_ACCOUNTS } from "@/config/app";
 import { cn } from "@/lib/utils";
 
-type LoginTab = "internal" | "client" | "supplier";
+type LoginTab = "internal" | "client" | "retailer" | "supplier";
 
 const TABS: { id: LoginTab; label: string; icon: typeof Briefcase; hint: string }[] = [
   { id: "internal", label: "Internal", icon: Briefcase, hint: "Admin & staff" },
-  { id: "client", label: "Wholesale", icon: Users, hint: "Hospitals & pharmacies" },
+  { id: "client", label: "Wholesale", icon: Users, hint: "Hospitals & clinics" },
+  { id: "retailer", label: "Retailer", icon: Store, hint: "Pharmacy shops & stores" },
   { id: "supplier", label: "Supplier", icon: Building2, hint: "Vendors & distributors" },
 ];
 
 const TAB_DEFAULTS: Record<LoginTab, { email: string; password: string }> = {
   internal: DEMO_ACCOUNTS.internal,
   client: DEMO_ACCOUNTS.client,
+  retailer: DEMO_ACCOUNTS.retailer,
   supplier: DEMO_ACCOUNTS.supplier,
 };
 
@@ -73,8 +75,9 @@ export default function LoginPage() {
       return;
     }
 
-    const dest = searchParams.get("callbackUrl") ?? data.redirectTo ?? "/";
-    router.replace(dest);
+    const dest = searchParams.get("callbackUrl") ?? data.redirectTo ?? "/dashboard";
+    router.push(dest);
+    router.refresh();
   }
 
   async function resendVerification() {
@@ -101,7 +104,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6 bg-background">
-      <Card className="w-full max-w-md glow-accent">
+      <Card className="w-full max-w-lg glow-accent">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/20 text-accent">
             <Pill className="h-7 w-7" />
@@ -112,7 +115,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-3 gap-1 rounded-lg bg-background p-1 border border-border">
+        <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-1 rounded-lg bg-background p-1 border border-border">
           {TABS.map((t) => (
             <button
               key={t.id}

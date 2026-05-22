@@ -15,6 +15,7 @@ import {
   Pill,
   Boxes,
   ClipboardList,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@prisma/client";
@@ -28,12 +29,21 @@ const staffNav = [
   { href: "/alerts", label: "Alerts", icon: Bell },
 ];
 
-const adminNav = [{ href: "/clients", label: "Clients", icon: Users }];
+const adminNav = [
+  { href: "/clients", label: "Clients", icon: Users },
+  { href: "/retailers", label: "Retailers", icon: Store },
+];
 
 const clientNav = [
   { href: "/catalog", label: "Catalog", icon: Pill },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/my-orders", label: "My Orders", icon: Package },
+];
+
+const retailerNav = [
+  { href: "/retailer/catalog", label: "Catalog", icon: Pill },
+  { href: "/retailer/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/retailer/my-orders", label: "My Orders", icon: Package },
 ];
 
 const supplierNav = [
@@ -47,12 +57,20 @@ export function Sidebar({ role, userName }: { role: Role; userName: string }) {
   const links =
     role === "CLIENT"
       ? clientNav
-      : role === "SUPPLIER"
-        ? supplierNav
-        : [...staffNav, ...(role === "ADMIN" ? adminNav : [])];
+      : role === "RETAILER"
+        ? retailerNav
+        : role === "SUPPLIER"
+          ? supplierNav
+          : [...staffNav, ...(role === "ADMIN" ? adminNav : [])];
 
   const roleLabel =
-    role === "SUPPLIER" ? "supplier" : role === "CLIENT" ? "wholesale client" : role.toLowerCase();
+    role === "SUPPLIER"
+      ? "supplier"
+      : role === "CLIENT"
+        ? "wholesale client"
+        : role === "RETAILER"
+          ? "retailer"
+          : role.toLowerCase();
 
   return (
     <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-border bg-surface">

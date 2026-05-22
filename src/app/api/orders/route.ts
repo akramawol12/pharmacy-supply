@@ -16,14 +16,17 @@ export async function GET(req: Request) {
   const where =
     session.user.role === Role.CLIENT
       ? { clientId: session.user.clientId ?? undefined }
-      : status
-        ? { status: status as OrderStatus }
-        : {};
+      : session.user.role === Role.RETAILER
+        ? { retailerId: session.user.retailerId ?? undefined }
+        : status
+          ? { status: status as OrderStatus }
+          : {};
 
   const orders = await prisma.order.findMany({
     where,
     include: {
       client: true,
+      retailer: true,
       items: { include: { medicine: true } },
       createdBy: { select: { name: true } },
     },
@@ -43,10 +46,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { orderType, clientId, walkInName, items } = parsed.data;
+  const { orderType, clientId, retailerId, walkInName, items } = parsed.data;
 
   if (session.user.role === Role.CLIENT) {
     if (orderType !== OrderType.WHOLESALE) return forbidden();
+  } else if (session.user.role === Role.RETAILER) {
+    if (orderType !== OrderType.RETAIL) return forbidden();
   } else if (!hasRole(session.user.role, ADMIN_STAFF)) {
     return forbidden();
   }
@@ -89,6 +94,8 @@ export async function POST(req: Request) {
 
   const resolvedClientId =
     session.user.role === Role.CLIENT ? session.user.clientId : clientId ?? null;
+  const resolvedRetailerId =
+    session.user.role === Role.RETAILER ? session.user.retailerId : retailerId ?? null;
 
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
@@ -96,15 +103,20 @@ export async function POST(req: Request) {
         orderNumber: generateOrderNumber(),
         orderType,
         clientId: resolvedClientId,
+        retailerId: resolvedRetailerId,
         walkInName: walkInName ?? null,
         totalAmount,
         status: OrderStatus.PENDING,
-        createdById: session.user.role === Role.CLIENT ? null : session.user.id,
+        createdById:
+          session.user.role === Role.CLIENT || session.user.role === Role.RETAILER
+            ? null
+            : session.user.id,
         items: { create: lineItems },
       },
       include: {
         items: { include: { medicine: true } },
         client: true,
+        retailer: true,
       },
     });
 

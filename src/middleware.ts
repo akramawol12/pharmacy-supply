@@ -4,6 +4,7 @@ import { getToken } from "next-auth/jwt";
 import {
   CLIENT_ROUTES,
   PUBLIC_PATHS,
+  RETAILER_ROUTES,
   ROLE_HOME,
   STAFF_ROUTES,
   SUPPLIER_ROUTES,
@@ -47,24 +48,35 @@ export async function middleware(req: NextRequest) {
   }
 
   if (isLoggedIn && role) {
-    if (role === "CLIENT" && matchesAny(pathname, STAFF_ROUTES)) {
+    if (role === "CLIENT" && matchesAny(pathname, [...STAFF_ROUTES, ...RETAILER_ROUTES, ...SUPPLIER_ROUTES])) {
       return NextResponse.redirect(new URL("/catalog", req.nextUrl.origin));
     }
 
-    if (role === "SUPPLIER" && matchesAny(pathname, [...STAFF_ROUTES, ...CLIENT_ROUTES])) {
+    if (role === "RETAILER" && matchesAny(pathname, [...STAFF_ROUTES, ...CLIENT_ROUTES, ...SUPPLIER_ROUTES])) {
+      return NextResponse.redirect(new URL("/retailer/catalog", req.nextUrl.origin));
+    }
+
+    if (role === "SUPPLIER" && matchesAny(pathname, [...STAFF_ROUTES, ...CLIENT_ROUTES, ...RETAILER_ROUTES])) {
       return NextResponse.redirect(new URL("/supplier/dashboard", req.nextUrl.origin));
     }
 
-    if (role === "STAFF" && pathname.startsWith("/clients")) {
+    if (role === "STAFF" && (pathname.startsWith("/clients") || pathname.startsWith("/retailers"))) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
 
-    if ((role === "ADMIN" || role === "STAFF") && matchesAny(pathname, [...CLIENT_ROUTES, ...SUPPLIER_ROUTES])) {
+    if (
+      (role === "ADMIN" || role === "STAFF") &&
+      matchesAny(pathname, [...CLIENT_ROUTES, ...RETAILER_ROUTES, ...SUPPLIER_ROUTES])
+    ) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
 
-    if (role === "CLIENT" && matchesAny(pathname, SUPPLIER_ROUTES)) {
+    if (role === "CLIENT" && matchesAny(pathname, [...SUPPLIER_ROUTES, ...RETAILER_ROUTES])) {
       return NextResponse.redirect(new URL("/catalog", req.nextUrl.origin));
+    }
+
+    if (role === "RETAILER" && matchesAny(pathname, [...CLIENT_ROUTES, ...SUPPLIER_ROUTES])) {
+      return NextResponse.redirect(new URL("/retailer/catalog", req.nextUrl.origin));
     }
   }
 

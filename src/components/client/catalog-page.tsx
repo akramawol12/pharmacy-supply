@@ -7,8 +7,14 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { addToCart } from "@/lib/cart";
+import { addToCart, CART_KEY_WHOLESALE } from "@/lib/cart";
 import { ShoppingCart } from "lucide-react";
+
+export type CatalogPageConfig = {
+  priceLabel?: string;
+  cartKey?: string;
+  cartHref?: string;
+};
 
 type CatalogItem = {
   id: string;
@@ -20,7 +26,12 @@ type CatalogItem = {
   expiryDate: string | null;
 };
 
-export function CatalogPage({ initialItems }: { initialItems: CatalogItem[] }) {
+export function CatalogPage({
+  initialItems,
+  priceLabel = "Wholesale",
+  cartKey = CART_KEY_WHOLESALE,
+  cartHref = "/cart",
+}: { initialItems: CatalogItem[] } & CatalogPageConfig) {
   const router = useRouter();
   const [search, setSearch] = useState("");
 
@@ -42,7 +53,7 @@ export function CatalogPage({ initialItems }: { initialItems: CatalogItem[] }) {
             <CardTitle className="text-base">{m.name}</CardTitle>
             <CardDescription>{m.category} · {m.manufacturer}</CardDescription>
             <p className="mt-3 text-2xl font-bold text-accent">{formatCurrency(m.price)}</p>
-            <p className="text-xs text-muted mt-1">Wholesale · Exp: {formatDate(m.expiryDate)}</p>
+            <p className="text-xs text-muted mt-1">{priceLabel} · Exp: {formatDate(m.expiryDate)}</p>
             <div className="mt-3 flex items-center justify-between">
               <Badge status={m.stockQuantity > 0 ? "ok" : "low"}>
                 {m.stockQuantity > 0 ? `${m.stockQuantity} in stock` : "Out of stock"}
@@ -50,13 +61,17 @@ export function CatalogPage({ initialItems }: { initialItems: CatalogItem[] }) {
               <Button
                 disabled={m.stockQuantity < 1}
                 onClick={() => {
-                  addToCart({
-                    medicineId: m.id,
-                    name: m.name,
-                    price: m.price,
-                    maxStock: m.stockQuantity,
-                  });
-                  router.push("/cart");
+                  addToCart(
+                    {
+                      medicineId: m.id,
+                      name: m.name,
+                      price: m.price,
+                      maxStock: m.stockQuantity,
+                    },
+                    1,
+                    cartKey
+                  );
+                  router.push(cartHref);
                 }}
               >
                 <ShoppingCart className="h-4 w-4" />

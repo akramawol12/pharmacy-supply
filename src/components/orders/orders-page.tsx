@@ -20,6 +20,7 @@ type Order = {
   walkInName: string | null;
   createdAt: string;
   client: { name: string } | null;
+  retailer: { name: string } | null;
   items: {
     quantity: number;
     unitPrice: number;
@@ -162,7 +163,8 @@ export function OrdersPage({
               <div>
                 <p className="font-bold">{o.orderNumber}</p>
                 <p className="text-sm text-muted">
-                  {o.client?.name ?? o.walkInName ?? "Walk-in"} · {o.orderType} · {formatDate(o.createdAt)}
+                  {o.client?.name ?? o.retailer?.name ?? o.walkInName ?? "Walk-in"} · {o.orderType} ·{" "}
+                  {formatDate(o.createdAt)}
                 </p>
                 <ul className="mt-2 text-sm text-muted">
                   {o.items.map((it, i) => (

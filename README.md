@@ -8,7 +8,9 @@ Professional wholesale + retail pharmacy supply platform with analytics, command
 |------|--------|
 | **Admin** | Full system: inventory, pricing, orders, suppliers, purchases, clients, reports, users |
 | **Staff** | Stock, manual orders, fulfill online orders, supplier purchases |
-| **Client** | Wholesale catalog, cart, place orders |
+| **Client** | Wholesale catalog, cart, place wholesale orders |
+| **Retailer** | Retail catalog (retail pricing), cart, place retail orders |
+| **Retailer** | Retail catalog (retail pricing), cart, place retail orders |
 | **Supplier** | View deliveries, linked products, supplier dashboard |
 
 All portal accounts require **email verification** before sign-in.
@@ -31,9 +33,10 @@ All portal accounts require **email verification** before sign-in.
 1. **Add medicine** — Admin sets retail/wholesale price, stock, expiry, supplier → catalog
 2. **Manual sale** — Staff searches catalog → order (wholesale/retail pricing) → invoice
 3. **Online wholesale order** — Client browses → cart → order → staff confirms/fulfills
-4. **Supplier purchase** — Staff records receipt → stock auto-updates
-5. **Alerts** — Low stock + expiry warnings
-6. **Dashboard** — Sales, revenue split, stock value, pending orders, alert counts
+4. **Online retail order** — Retailer browses retail catalog → cart → order → staff fulfills
+5. **Supplier purchase** — Staff records receipt → stock auto-updates
+6. **Alerts** — Low stock + expiry warnings
+7. **Dashboard** — Sales, revenue split, stock value, pending orders, alert counts
 
 ## Stack
 
@@ -62,6 +65,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | admin@pharma.local | Admin |
 | staff@pharma.local | Staff |
 | clinic@hospital.local | Client (wholesale) |
+| retail@pharmacy.local | Retailer |
 | supplier@medicore.local | Supplier |
 
 ## Project structure

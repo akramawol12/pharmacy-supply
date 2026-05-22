@@ -13,6 +13,7 @@ async function main() {
   await prisma.medicine.deleteMany();
   await prisma.user.deleteMany();
   await prisma.client.deleteMany();
+  await prisma.retailer.deleteMany();
   await prisma.supplier.deleteMany();
 
   const supplier = await prisma.supplier.create({
@@ -32,6 +33,16 @@ async function main() {
       phone: "+1-555-0200",
       email: "procurement@riverside.example",
       address: "45 Hospital Ave",
+    },
+  });
+
+  const retailer = await prisma.retailer.create({
+    data: {
+      name: "GreenLeaf Community Pharmacy",
+      type: "retail",
+      phone: "+1-555-0300",
+      email: "orders@greenleaf.example",
+      address: "88 Main Street",
     },
   });
 
@@ -59,6 +70,14 @@ async function main() {
         name: "Riverside Procurement",
         role: Role.CLIENT,
         clientId: client.id,
+        emailVerifiedAt: verified,
+      },
+      {
+        email: "retail@pharmacy.local",
+        passwordHash,
+        name: "GreenLeaf Orders",
+        role: Role.RETAILER,
+        retailerId: retailer.id,
         emailVerifiedAt: verified,
       },
       {
@@ -157,6 +176,7 @@ async function main() {
     { type: OrderType.WHOLESALE, status: OrderStatus.FULFILLED, days: 1, client: client.id, med: amox, qty: 50, price: 8.75 },
     { type: OrderType.RETAIL, status: OrderStatus.PENDING, days: 0, walkIn: "Walk-in Customer", med: ibu, qty: 2, price: 6 },
     { type: OrderType.WHOLESALE, status: OrderStatus.CONFIRMED, days: 0, client: client.id, med: meta, qty: 10, price: 13.5 },
+    { type: OrderType.RETAIL, status: OrderStatus.PENDING, days: 0, retailer: retailer.id, med: ibu, qty: 4, price: 6 },
   ];
 
   for (let i = 0; i < sampleOrders.length; i++) {
@@ -168,6 +188,7 @@ async function main() {
         orderType: s.type,
         status: s.status,
         clientId: "client" in s ? s.client : null,
+        retailerId: "retailer" in s ? s.retailer : null,
         walkInName: "walkIn" in s ? s.walkIn : null,
         totalAmount: subtotal,
         createdById: staff.id,

@@ -36,25 +36,40 @@ export async function GET(req: Request) {
           { href: "/cart", label: "Cart" },
           { href: "/my-orders", label: "My Orders" },
         ]
-      : session.user.role === Role.SUPPLIER
+      : session.user.role === Role.RETAILER
         ? [
-            { href: "/supplier/dashboard", label: "Dashboard" },
-            { href: "/supplier/deliveries", label: "Deliveries" },
-            { href: "/supplier/products", label: "My Products" },
+            { href: "/retailer/catalog", label: "Catalog" },
+            { href: "/retailer/cart", label: "Cart" },
+            { href: "/retailer/my-orders", label: "My Orders" },
           ]
-        : [
-            { href: "/dashboard", label: "Dashboard" },
-            { href: "/inventory", label: "Inventory" },
-            { href: "/orders", label: "Orders" },
-            { href: "/purchases", label: "Purchases" },
-            { href: "/suppliers", label: "Suppliers" },
-            { href: "/alerts", label: "Alerts" },
-            ...(session.user.role === Role.ADMIN ? [{ href: "/clients", label: "Clients" }] : []),
-          ];
+        : session.user.role === Role.SUPPLIER
+          ? [
+              { href: "/supplier/dashboard", label: "Dashboard" },
+              { href: "/supplier/deliveries", label: "Deliveries" },
+              { href: "/supplier/products", label: "My Products" },
+            ]
+          : [
+              { href: "/dashboard", label: "Dashboard" },
+              { href: "/inventory", label: "Inventory" },
+              { href: "/orders", label: "Orders" },
+              { href: "/purchases", label: "Purchases" },
+              { href: "/suppliers", label: "Suppliers" },
+              { href: "/alerts", label: "Alerts" },
+              ...(session.user.role === Role.ADMIN
+                ? [
+                    { href: "/clients", label: "Clients" },
+                    { href: "/retailers", label: "Retailers" },
+                  ]
+                : []),
+            ];
 
   const matchedPages = pages.filter((p) => p.label.toLowerCase().includes(q.toLowerCase()));
 
-  if (session.user.role === Role.CLIENT || session.user.role === Role.SUPPLIER) {
+  if (
+    session.user.role === Role.CLIENT ||
+    session.user.role === Role.RETAILER ||
+    session.user.role === Role.SUPPLIER
+  ) {
     return NextResponse.json({ medicines, orders: [], pages: matchedPages });
   }
 
@@ -64,6 +79,7 @@ export async function GET(req: Request) {
         { orderNumber: { contains: q } },
         { walkInName: { contains: q } },
         { client: { name: { contains: q } } },
+        { retailer: { name: { contains: q } } },
       ],
     },
     take: 6,

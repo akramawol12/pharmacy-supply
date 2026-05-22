@@ -6,6 +6,7 @@ import { getDashboardStats } from "@/lib/data/dashboard";
 export default async function DashboardPage() {
   const session = await auth();
   if (session?.user.role === "CLIENT") redirect("/catalog");
+  if (session?.user.role === "RETAILER") redirect("/retailer/catalog");
   if (session?.user.role === "SUPPLIER") redirect("/supplier/dashboard");
 
   const stats = await getDashboardStats();

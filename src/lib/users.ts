@@ -10,6 +10,7 @@ export async function createPortalUser(opts: {
   name: string;
   role: Role;
   clientId?: string;
+  retailerId?: string;
   supplierId?: string;
   skipVerification?: boolean;
 }) {
@@ -23,6 +24,7 @@ export async function createPortalUser(opts: {
       name: opts.name,
       role: opts.role,
       clientId: opts.clientId ?? null,
+      retailerId: opts.retailerId ?? null,
       supplierId: opts.supplierId ?? null,
       emailVerifiedAt: opts.skipVerification ? new Date() : null,
     },

@@ -34,6 +34,20 @@ export async function GET() {
     );
   }
 
+  if (session.user.role === Role.RETAILER) {
+    return NextResponse.json(
+      medicines.map((m) => ({
+        id: m.id,
+        name: m.name,
+        category: m.category,
+        manufacturer: m.manufacturer,
+        price: m.retailPrice,
+        stockQuantity: m.stockQuantity,
+        expiryDate: m.expiryDate,
+      }))
+    );
+  }
+
   if (session.user.role === Role.SUPPLIER) {
     return NextResponse.json(
       medicines.map((m) => ({

@@ -15,7 +15,7 @@ type Supplier = {
   phone: string | null;
   email: string | null;
   _count: { medicines: number };
-  user: { email: string; emailVerifiedAt: Date | null } | null;
+  user: { email: string; emailVerifiedAt: string | null } | null;
 };
 
 export function SuppliersPage({

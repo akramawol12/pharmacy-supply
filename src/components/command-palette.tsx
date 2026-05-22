@@ -13,6 +13,7 @@ import {
   Truck,
   Users,
   Building2,
+  Store,
 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
@@ -29,6 +30,12 @@ const clientPages = [
   { href: "/catalog", label: "Catalog", icon: Pill },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/my-orders", label: "My Orders", icon: Package },
+];
+
+const retailerPages = [
+  { href: "/retailer/catalog", label: "Catalog", icon: Pill },
+  { href: "/retailer/cart", label: "Cart", icon: ShoppingCart },
+  { href: "/retailer/my-orders", label: "My Orders", icon: Package },
 ];
 
 type SearchResult = {
@@ -52,9 +59,19 @@ export function CommandPalette({ role }: { role: Role }) {
   const pages =
     role === "CLIENT"
       ? clientPages
-      : role === "SUPPLIER"
-        ? supplierPages
-        : [...staffPages, ...(role === "ADMIN" ? [{ href: "/clients", label: "Clients", icon: Users }] : [])];
+      : role === "RETAILER"
+        ? retailerPages
+        : role === "SUPPLIER"
+          ? supplierPages
+          : [
+              ...staffPages,
+              ...(role === "ADMIN"
+                ? [
+                    { href: "/clients", label: "Clients", icon: Users },
+                    { href: "/retailers", label: "Retailers", icon: Store },
+                  ]
+                : []),
+            ];
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -150,9 +167,11 @@ export function CommandPalette({ role }: { role: Role }) {
                     go(
                       role === "CLIENT"
                         ? "/catalog"
-                        : role === "SUPPLIER"
-                          ? "/supplier/products"
-                          : "/inventory"
+                        : role === "RETAILER"
+                          ? "/retailer/catalog"
+                          : role === "SUPPLIER"
+                            ? "/supplier/products"
+                            : "/inventory"
                     )
                   }
                   className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm aria-selected:bg-accent/15"

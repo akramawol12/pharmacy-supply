@@ -28,23 +28,30 @@ This app uses **no paid APIs**. Everything runs on free hosting and a free datab
 
 On your computer, in the project folder:
 
-1. Open `prisma/schema.prisma` and change the datasource:
+1. Set your Supabase URLs in `.env` (or temporarily in PowerShell). The build script **`scripts/sync-db-provider.mjs`** switches Prisma to PostgreSQL automatically when `DATABASE_URL` starts with `postgresql://` — you do not need to edit `schema.prisma` by hand.
 
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-```
+2. Push schema and seed:
 
-2. Set your Supabase URL locally and push schema:
+```powershell
+# 1. Copy template and set your DB password (Settings → Database → password)
+Copy-Item .env.supabase.example .env.local
+# Edit .env.local — replace YOUR_DB_PASSWORD
 
-```bash
-# Windows PowerShell — replace with your real URL
-$env:DATABASE_URL="postgresql://..."
-npx prisma db push
+# 2. Push schema + seed (reads .env.local via dotenv / Prisma)
+npm run db:push
 npm run db:seed
 ```
+
+**This project (`fynwqohlhfdidfrwxqmi`):**
+
+| Variable | Value |
+|----------|--------|
+| `DATABASE_URL` | `postgresql://postgres.fynwqohlhfdidfrwxqmi:PASSWORD@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true` |
+| `DIRECT_URL` | `postgresql://postgres:PASSWORD@db.fynwqohlhfdidfrwxqmi.supabase.co:5432/postgres` |
+
+> Use the **direct** host (`db.*.supabase.co`) for `DIRECT_URL`, not the pooler hostname on port 5432.
+
+You do **not** need `@supabase/supabase-js` or `NEXT_PUBLIC_SUPABASE_*` for this app — auth and data go through Prisma + NextAuth.
 
 3. Confirm the app works locally:
 
@@ -63,7 +70,8 @@ npm run start
 
 | Variable | Value |
 |----------|--------|
-| `DATABASE_URL` | Supabase PostgreSQL connection string |
+| `DATABASE_URL` | Supabase **pooler** connection string (port 6543, `?pgbouncer=true`) |
+| `DIRECT_URL` | Supabase **direct** connection (port 5432) — recommended for `db push` / migrations |
 | `AUTH_SECRET` | Random 32+ char string (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | `https://your-app.vercel.app` (your Vercel URL) |
 | `APP_URL` | Same as `NEXTAUTH_URL` |

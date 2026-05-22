@@ -5,17 +5,29 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { getCart, saveCart, clearCart, type CartItem } from "@/lib/cart";
+import { getCart, saveCart, clearCart, CART_KEY_WHOLESALE, type CartItem } from "@/lib/cart";
 import { useRouter } from "next/navigation";
 
-export function CartPage() {
+export type CartPageConfig = {
+  cartKey?: string;
+  orderType?: "WHOLESALE" | "RETAIL";
+  ordersHref?: string;
+  submitLabel?: string;
+};
+
+export function CartPage({
+  cartKey = CART_KEY_WHOLESALE,
+  orderType = "WHOLESALE",
+  ordersHref = "/my-orders",
+  submitLabel = "Place wholesale order",
+}: CartPageConfig = {}) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setCart(getCart());
-  }, []);
+    setCart(getCart(cartKey));
+  }, [cartKey]);
 
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
@@ -25,7 +37,7 @@ export function CartPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        orderType: "WHOLESALE",
+        orderType,
         items: cart.map((c) => ({ medicineId: c.medicineId, quantity: c.quantity })),
       }),
     });
@@ -33,8 +45,8 @@ export function CartPage() {
     if (res.ok) {
       const order = await res.json();
       toast.success("Order placed", { description: order.orderNumber });
-      clearCart();
-      router.push("/my-orders");
+      clearCart(cartKey);
+      router.push(ordersHref);
     } else {
       const err = await res.json();
       toast.error(err.error ?? "Order failed");
@@ -69,7 +81,7 @@ export function CartPage() {
                           : c
                       );
                       setCart(next);
-                      saveCart(next);
+                      saveCart(next, cartKey);
                     }}
                   />
                   <p className="font-bold text-accent w-20 text-right">
@@ -84,7 +96,7 @@ export function CartPage() {
             <p className="text-2xl font-bold text-accent">{formatCurrency(total)}</p>
           </Card>
           <Button className="mt-4" onClick={placeOrder} disabled={submitting}>
-            {submitting ? "Placing order…" : "Place wholesale order"}
+            {submitting ? "Placing order…" : submitLabel}
           </Button>
         </>
       )}

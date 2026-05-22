@@ -20,8 +20,18 @@ export const orderItemSchema = z.object({
 export const createOrderSchema = z.object({
   orderType: z.enum(["WHOLESALE", "RETAIL"]),
   clientId: z.string().optional(),
+  retailerId: z.string().optional(),
   walkInName: z.string().optional(),
   items: z.array(orderItemSchema).min(1),
+});
+
+export const retailerSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  address: z.string().optional(),
+  loginEmail: z.string().email().optional(),
+  loginPassword: z.string().min(8).optional(),
 });
 
 export const purchaseSchema = z.object({

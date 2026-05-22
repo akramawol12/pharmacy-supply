@@ -12,6 +12,7 @@ export type InvoiceOrder = {
   createdAt: string;
   walkInName: string | null;
   client: { name: string } | null;
+  retailer?: { name: string } | null;
   items: {
     quantity: number;
     unitPrice: number;
@@ -62,7 +63,9 @@ export function InvoiceModal({
             </div>
             <div>
               <p className="text-muted">Customer</p>
-              <p className="font-bold">{order.client?.name ?? order.walkInName ?? "Walk-in"}</p>
+              <p className="font-bold">
+                {order.client?.name ?? order.retailer?.name ?? order.walkInName ?? "Walk-in"}
+              </p>
             </div>
             <div>
               <p className="text-muted">Type</p>

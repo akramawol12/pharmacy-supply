@@ -9,6 +9,7 @@ declare module "next-auth" {
   interface User {
     role: Role;
     clientId?: string | null;
+    retailerId?: string | null;
     supplierId?: string | null;
     accountVerified: boolean;
   }
@@ -19,6 +20,7 @@ declare module "next-auth" {
       name: string;
       role: Role;
       clientId?: string | null;
+      retailerId?: string | null;
       supplierId?: string | null;
       accountVerified: boolean;
     };
@@ -30,12 +32,15 @@ declare module "@auth/core/jwt" {
     id: string;
     role: Role;
     clientId?: string | null;
+    retailerId?: string | null;
     supplierId?: string | null;
     accountVerified: boolean;
   }
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -62,8 +67,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           role: user.role,
-          clientId: user.clientId,
-          supplierId: user.supplierId,
+          clientId: user.clientId ?? null,
+          retailerId: user.retailerId ?? null,
+          supplierId: user.supplierId ?? null,
           accountVerified: true,
         };
       },
@@ -75,6 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id!;
         token.role = user.role;
         token.clientId = user.clientId;
+        token.retailerId = user.retailerId;
         token.supplierId = user.supplierId;
         token.accountVerified = true;
       }
@@ -85,6 +92,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.clientId = token.clientId as string | null | undefined;
+        session.user.retailerId = token.retailerId as string | null | undefined;
         session.user.supplierId = token.supplierId as string | null | undefined;
         session.user.accountVerified = Boolean(token.accountVerified);
       }

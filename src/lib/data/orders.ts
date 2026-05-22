@@ -1,11 +1,19 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
-export const getOrders = cache(async (clientId?: string | null) => {
+export const getOrders = cache(
+  async (opts?: { clientId?: string | null; retailerId?: string | null }) => {
+  const where = opts?.clientId
+    ? { clientId: opts.clientId }
+    : opts?.retailerId
+      ? { retailerId: opts.retailerId }
+      : undefined;
+
   const orders = await prisma.order.findMany({
-    where: clientId ? { clientId } : undefined,
+    where,
     include: {
       client: { select: { name: true } },
+      retailer: { select: { name: true } },
       items: {
         include: { medicine: { select: { name: true } } },
       },
@@ -23,9 +31,11 @@ export const getOrders = cache(async (clientId?: string | null) => {
       medicine: it.medicine,
     })),
   }));
-});
+  }
+);
 
-export const getOrdersList = cache(async (clientId?: string | null) => {
-  const orders = await getOrders(clientId);
-  return orders;
-});
+export const getOrdersList = cache(
+  async (opts?: { clientId?: string | null; retailerId?: string | null }) => {
+  return getOrders(opts);
+  }
+);
