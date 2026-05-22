@@ -13,18 +13,18 @@ export default async function DashboardPage() {
 
   const [stats, setup] = await Promise.all([getDashboardStats(), getSetupProgress()]);
 
+  const userName = session?.user.name ?? "";
+
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      <p className="mt-1 text-muted">Overview of sales, stock, and alerts · ETB</p>
-      <div className="mt-8">
+      <div className="mb-6">
         <OnboardingChecklist
           steps={setup.steps}
           completed={setup.completed}
           total={setup.total}
         />
       </div>
-      <DashboardView stats={stats} />
+      <DashboardView stats={stats} userName={userName} />
     </div>
   );
 }

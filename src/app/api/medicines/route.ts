@@ -79,6 +79,8 @@ export async function POST(req: Request) {
   const medicine = await prisma.medicine.create({
     data: {
       ...data,
+      category: data.category?.trim() || null,
+      manufacturer: data.manufacturer?.trim() || null,
       expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       supplierId: data.supplierId || null,
     },

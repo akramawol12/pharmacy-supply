@@ -36,7 +36,7 @@ export function DashboardCharts({ revenueByDay, statusBreakdown, stockByCategory
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-2 border-border/80 bg-surface/80 backdrop-blur-sm">
         <CardTitle>Revenue trend (7 days)</CardTitle>
         <CardDescription>Wholesale vs retail fulfilled orders</CardDescription>
         <div className="mt-4 h-64">
@@ -67,7 +67,7 @@ export function DashboardCharts({ revenueByDay, statusBreakdown, stockByCategory
         </div>
       </Card>
 
-      <Card>
+      <Card className="border-border/80 bg-surface/80 backdrop-blur-sm">
         <CardTitle>Order status</CardTitle>
         <CardDescription>Pipeline breakdown</CardDescription>
         <div className="mt-4 h-56 flex items-center justify-center">
@@ -89,7 +89,7 @@ export function DashboardCharts({ revenueByDay, statusBreakdown, stockByCategory
         </div>
       </Card>
 
-      <Card>
+      <Card className="border-border/80 bg-surface/80 backdrop-blur-sm">
         <CardTitle>Stock by category</CardTitle>
         <CardDescription>Units on hand</CardDescription>
         <div className="mt-4 h-56">
