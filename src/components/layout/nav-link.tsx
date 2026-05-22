@@ -40,12 +40,12 @@ export function NavLink({ href, label, icon: Icon, allHrefs, compact, tab }: Pro
         aria-current={active ? "page" : undefined}
         aria-label={label}
         className={cn(
-          "flex min-h-[48px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[10px] font-medium touch-manipulation select-none",
+          "flex min-h-[52px] min-w-0 max-w-[7rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-2 text-xs font-medium touch-manipulation select-none sm:text-sm",
           active ? "text-accent" : "text-muted",
           isPending && "opacity-60"
         )}
       >
-        <Icon className="h-5 w-5 shrink-0 pointer-events-none" />
+        <Icon className="h-5 w-5 shrink-0 pointer-events-none sm:h-6 sm:w-6" />
         <span className="truncate pointer-events-none">{label}</span>
       </Link>
     );
