@@ -32,7 +32,7 @@ export function TopBar({
   }, [showAlerts]);
 
   return (
-    <header className="sticky top-0 z-40 -mx-8 -mt-8 mb-8 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-8 py-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 mb-4 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-0 py-3 backdrop-blur-xl md:-mx-8 md:-mt-8 md:mb-8 md:px-8 md:py-4">
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event("pharma:open-palette"))}
