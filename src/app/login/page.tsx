@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Pill, Building2, Users, Briefcase, Store } from "lucide-react";
@@ -34,30 +33,20 @@ export default function LoginPage() {
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function signInWith(email: string, password: string) {
     setLoading(true);
     setError("");
     setInfo("");
 
-    const form = new FormData(e.currentTarget);
-    const email = (form.get("email") as string).trim().toLowerCase();
-    const password = form.get("password") as string;
-
     try {
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+      const data = await res.json();
 
-      if (!res?.ok || res.error) {
-        const check = await fetch("/api/auth/check-credentials", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        const data = await check.json();
+      if (!data.ok) {
         if (data.code === "EMAIL_NOT_VERIFIED") {
           setError(data.message);
           setInfo("Use the link sent to your email, or resend below.");
@@ -67,10 +56,10 @@ export default function LoginPage() {
         return;
       }
 
-      const session = await fetch("/api/auth/session").then((r) => r.json());
-      const role = session?.user?.role as Role | undefined;
       const dest =
-        searchParams.get("callbackUrl") ?? (role ? ROLE_HOME[role] : "/dashboard");
+        searchParams.get("callbackUrl") ??
+        data.redirectTo ??
+        (data.role ? ROLE_HOME[data.role as Role] : "/dashboard");
 
       window.location.href = dest;
     } catch {
@@ -78,6 +67,19 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const email = (form.get("email") as string).trim().toLowerCase();
+    const password = form.get("password") as string;
+    await signInWith(email, password);
+  }
+
+  async function demoSignIn() {
+    const { email, password } = TAB_DEFAULTS[tab];
+    await signInWith(email, password);
   }
 
   async function resendVerification() {
@@ -165,6 +167,15 @@ export default function LoginPage() {
           {info && <p className="text-sm text-accent">{info}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full"
+            disabled={loading}
+            onClick={demoSignIn}
+          >
+            {loading ? "Signing in…" : "One-click demo sign in"}
           </Button>
         </form>
 

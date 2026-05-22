@@ -30,6 +30,8 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.AUTH_SECRET,
+    secureCookie:
+      process.env.NODE_ENV === "production" || req.nextUrl.protocol === "https:",
   });
 
   const isLoggedIn = !!token;
