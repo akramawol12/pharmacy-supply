@@ -15,8 +15,13 @@ function isPublic(pathname: string) {
   return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 }
 
+/** Match route prefix without false positives (e.g. /retailers must not match /retailer). */
+function matchesRoute(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(prefix + "/");
+}
+
 function matchesAny(pathname: string, prefixes: string[]) {
-  return prefixes.some((p) => pathname.startsWith(p));
+  return prefixes.some((p) => matchesRoute(pathname, p));
 }
 
 function homeForRole(role: string | undefined) {
@@ -62,7 +67,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/supplier/dashboard", req.nextUrl.origin));
     }
 
-    if (role === "STAFF" && (pathname.startsWith("/clients") || pathname.startsWith("/retailers"))) {
+    if (role === "STAFF" && (matchesRoute(pathname, "/clients") || matchesRoute(pathname, "/retailers"))) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
 
