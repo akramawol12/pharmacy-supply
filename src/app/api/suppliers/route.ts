@@ -35,34 +35,46 @@ export async function POST(req: Request) {
 
   const { name, contact, address, phone, email, loginEmail, loginPassword } = parsed.data;
 
-  const supplier = await prisma.supplier.create({
-    data: {
-      name,
-      contact,
-      address,
-      phone,
-      email: email || null,
-    },
-  });
+  try {
+    const supplier = await prisma.$transaction(async (tx) => {
+      const s = await tx.supplier.create({
+        data: {
+          name,
+          contact,
+          address,
+          phone,
+          email: email || null,
+        },
+      });
 
-  if (loginEmail && loginPassword) {
-    await createPortalUser({
-      email: loginEmail,
-      password: loginPassword,
-      name: `${name} Portal`,
-      role: Role.SUPPLIER,
-      supplierId: supplier.id,
+      if (loginEmail && loginPassword) {
+        await createPortalUser({
+          email: loginEmail,
+          password: loginPassword,
+          name: `${name} Portal`,
+          role: Role.SUPPLIER,
+          supplierId: s.id,
+        }, tx);
+      }
+      return s;
     });
+
+    await logActivity({
+      action: "created",
+      entity: "supplier",
+      entityId: supplier.id,
+      details: name,
+      userId: session.user.id,
+      userName: session.user.name ?? undefined,
+    });
+
+    return NextResponse.json(supplier, { status: 201 });
+  } catch (err: any) {
+    console.error("Supplier creation error:", err);
+    if (err.code === "P2002") {
+      return NextResponse.json({ error: "Email or login email already in use" }, { status: 400 });
+    }
+    return NextResponse.json({ error: err.message || "Failed to create supplier" }, { status: 500 });
   }
 
-  await logActivity({
-    action: "created",
-    entity: "supplier",
-    entityId: supplier.id,
-    details: name,
-    userId: session.user.id,
-    userName: session.user.name ?? undefined,
-  });
-
-  return NextResponse.json(supplier, { status: 201 });
 }

@@ -4,20 +4,24 @@ import { prisma } from "./prisma";
 import { normalizeEmail, setVerificationToken } from "./verification";
 import { sendVerificationEmail } from "./email";
 
-export async function createPortalUser(opts: {
-  email: string;
-  password: string;
-  name: string;
-  role: Role;
-  clientId?: string;
-  retailerId?: string;
-  supplierId?: string;
-  skipVerification?: boolean;
-}) {
+export async function createPortalUser(
+  opts: {
+    email: string;
+    password: string;
+    name: string;
+    role: Role;
+    clientId?: string;
+    retailerId?: string;
+    supplierId?: string;
+    skipVerification?: boolean;
+  },
+  tx?: any
+) {
+  const db = tx || prisma;
   const email = normalizeEmail(opts.email);
   const passwordHash = await bcrypt.hash(opts.password, 10);
 
-  const user = await prisma.user.create({
+  const user = await db.user.create({
     data: {
       email,
       passwordHash,
@@ -31,7 +35,7 @@ export async function createPortalUser(opts: {
   });
 
   if (!opts.skipVerification) {
-    const token = await setVerificationToken(user.id);
+    const token = await setVerificationToken(user.id, tx);
     await sendVerificationEmail({ to: email, name: opts.name, token });
   }
 

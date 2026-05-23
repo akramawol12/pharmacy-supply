@@ -33,11 +33,11 @@ export const createOrderSchema = z.object({
 
 export const retailerSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  address: z.string().optional(),
-  loginEmail: z.string().email().optional(),
-  loginPassword: z.string().min(8).optional(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().or(z.literal("")).nullable(),
+  address: z.string().optional().nullable(),
+  loginEmail: z.string().email().optional().or(z.literal("")).nullable(),
+  loginPassword: z.string().min(8).optional().or(z.literal("")).nullable(),
 });
 
 export const purchaseSchema = z.object({
@@ -49,19 +49,19 @@ export const purchaseSchema = z.object({
 
 export const clientSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  address: z.string().optional(),
-  loginEmail: z.string().email().optional(),
-  loginPassword: z.string().min(8).optional(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().or(z.literal("")).nullable(),
+  address: z.string().optional().nullable(),
+  loginEmail: z.string().email().optional().or(z.literal("")).nullable(),
+  loginPassword: z.string().min(8).optional().or(z.literal("")).nullable(),
 });
 
 export const supplierSchema = z.object({
   name: z.string().min(1),
-  contact: z.string().optional(),
-  address: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  loginEmail: z.string().email().optional(),
-  loginPassword: z.string().min(8).optional(),
+  contact: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email().optional().or(z.literal("")).nullable(),
+  loginEmail: z.string().email().optional().or(z.literal("")).nullable(),
+  loginPassword: z.string().min(8).optional().or(z.literal("")).nullable(),
 });

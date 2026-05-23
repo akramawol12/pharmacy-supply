@@ -11,9 +11,10 @@ export function generateVerificationToken() {
   return { token, expires };
 }
 
-export async function setVerificationToken(userId: string) {
+export async function setVerificationToken(userId: string, tx?: any) {
+  const db = tx || prisma;
   const { token, expires } = generateVerificationToken();
-  await prisma.user.update({
+  await db.user.update({
     where: { id: userId },
     data: {
       verificationToken: token,
