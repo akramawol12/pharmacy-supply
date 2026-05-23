@@ -13,14 +13,26 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
 
-  const where =
-    session.user.role === Role.CLIENT
-      ? { clientId: session.user.clientId ?? undefined }
-      : session.user.role === Role.RETAILER
-        ? { retailerId: session.user.retailerId ?? undefined }
-        : status
-          ? { status: status as OrderStatus }
-          : {};
+  let where: any = {};
+
+  if (session.user.role === Role.CLIENT) {
+    if (!session.user.clientId) {
+      return NextResponse.json([]);
+    }
+    where = { clientId: session.user.clientId };
+  } else if (session.user.role === Role.RETAILER) {
+    if (!session.user.retailerId) {
+      return NextResponse.json([]);
+    }
+    where = { retailerId: session.user.retailerId };
+  } else if (hasRole(session.user.role, ADMIN_STAFF)) {
+    if (status) {
+      where = { status: status as OrderStatus };
+    }
+  } else {
+    // Other roles (e.g. SUPPLIER) shouldn't be accessing this list unless specifically allowed
+    return forbidden();
+  }
 
   const orders = await prisma.order.findMany({
     where,
@@ -56,8 +68,15 @@ export async function POST(req: Request) {
     return forbidden();
   }
 
+  // Aggregate items by medicineId to handle duplicates and correctly check total requested quantity
+  const aggregatedItems = items.reduce((acc, item) => {
+    acc[item.medicineId] = (acc[item.medicineId] || 0) + item.quantity;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const medicineIds = Object.keys(aggregatedItems);
   const medicines = await prisma.medicine.findMany({
-    where: { id: { in: items.map((i) => i.medicineId) } },
+    where: { id: { in: medicineIds } },
   });
 
   const medMap = new Map(medicines.map((m) => [m.id, m]));
@@ -69,10 +88,10 @@ export async function POST(req: Request) {
     subtotal: number;
   }[] = [];
 
-  for (const item of items) {
-    const med = medMap.get(item.medicineId);
+  for (const [medicineId, quantity] of Object.entries(aggregatedItems)) {
+    const med = medMap.get(medicineId);
     if (!med) {
-      return NextResponse.json({ error: `Medicine ${item.medicineId} not found` }, { status: 400 });
+      return NextResponse.json({ error: `Medicine ${medicineId} not found` }, { status: 400 });
     }
     if (med.expiryDate && med.expiryDate < new Date()) {
       return NextResponse.json(
@@ -80,19 +99,19 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (med.stockQuantity < item.quantity) {
+    if (med.stockQuantity < quantity) {
       return NextResponse.json(
-        { error: `Insufficient stock for ${med.name}` },
+        { error: `Insufficient stock for ${med.name} (Requested: ${quantity}, Available: ${med.stockQuantity})` },
         { status: 400 }
       );
     }
     const unitPrice =
       orderType === OrderType.WHOLESALE ? med.wholesalePrice : med.retailPrice;
-    const subtotal = unitPrice * item.quantity;
+    const subtotal = unitPrice * quantity;
     totalAmount += subtotal;
     lineItems.push({
-      medicineId: item.medicineId,
-      quantity: item.quantity,
+      medicineId,
+      quantity,
       unitPrice,
       subtotal,
     });
@@ -103,48 +122,67 @@ export async function POST(req: Request) {
   const resolvedRetailerId =
     session.user.role === Role.RETAILER ? session.user.retailerId : retailerId ?? null;
 
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        orderType,
-        clientId: resolvedClientId,
-        retailerId: resolvedRetailerId,
-        walkInName: walkInName ?? null,
-        totalAmount,
-        status: OrderStatus.PENDING,
-        createdById:
-          session.user.role === Role.CLIENT || session.user.role === Role.RETAILER
-            ? null
-            : session.user.id,
-        items: { create: lineItems },
-      },
-      include: {
-        items: { include: { medicine: true } },
-        client: true,
-        retailer: true,
-      },
-    });
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      // Atomic stock update with sufficiency check
+      for (const item of lineItems) {
+        const updated = await tx.medicine.updateMany({
+          where: {
+            id: item.medicineId,
+            stockQuantity: { gte: item.quantity },
+          },
+          data: {
+            stockQuantity: { decrement: item.quantity },
+          },
+        });
 
-    for (const item of lineItems) {
-      await tx.medicine.update({
-        where: { id: item.medicineId },
-        data: { stockQuantity: { decrement: item.quantity } },
+        if (updated.count === 0) {
+          const med = await tx.medicine.findUnique({
+            where: { id: item.medicineId },
+            select: { name: true },
+          });
+          throw new Error(`Insufficient stock for ${med?.name || "unknown medicine"}`);
+        }
+      }
+
+      const created = await tx.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          orderType,
+          clientId: resolvedClientId,
+          retailerId: resolvedRetailerId,
+          walkInName: walkInName ?? null,
+          totalAmount,
+          status: OrderStatus.PENDING,
+          createdById:
+            session.user.role === Role.CLIENT || session.user.role === Role.RETAILER
+              ? null
+              : session.user.id,
+          items: { create: lineItems },
+        },
+        include: {
+          items: { include: { medicine: true } },
+          client: true,
+          retailer: true,
+        },
       });
-    }
 
-    await tx.orderStatusEvent.create({
-      data: {
-        orderId: created.id,
-        status: OrderStatus.PENDING,
-        note: "Order placed",
-        userId: session.user.id,
-        userName: session.user.name ?? undefined,
-      },
+      await tx.orderStatusEvent.create({
+        data: {
+          orderId: created.id,
+          status: OrderStatus.PENDING,
+          note: "Order placed",
+          userId: session.user.id,
+          userName: session.user.name ?? undefined,
+        },
+      });
+
+      return created;
     });
-
-    return created;
-  });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || "Transaction failed" }, { status: 400 });
+  }
 
   await logActivity({
     action: "created",
