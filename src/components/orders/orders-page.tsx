@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -48,14 +48,22 @@ export function OrdersPage({
   initialMedicines: Medicine[];
 }) {
   const router = useRouter();
+  const [orders, setOrders] = useState(initialOrders);
   const [showForm, setShowForm] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<InvoiceOrder | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [lines, setLines] = useState<{ medicineId: string; quantity: number }[]>([
-    { medicineId: "", quantity: 1 },
+  const [lines, setLines] = useState<{ id: string; medicineId: string; quantity: number; search: string }[]>([
+    { id: Math.random().toString(36).slice(2), medicineId: "", quantity: 1, search: "" },
   ]);
 
+  useEffect(() => {
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
   async function patchOrder(id: string, body: Record<string, string>) {
+    const previousOrders = [...orders];
+    setOrders(current => current.map(o => o.id === id ? { ...o, ...body } : o));
+
     const res = await fetch(`/api/orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -65,6 +73,7 @@ export function OrdersPage({
       router.refresh();
       return true;
     }
+    setOrders(previousOrders);
     toast.error("Update failed");
     return false;
   }
@@ -147,45 +156,89 @@ export function OrdersPage({
                 <Input name="walkInName" placeholder="Optional for retail" />
               </div>
             </div>
-            {lines.map((line, i) => (
-              <div key={i} className="grid gap-2 sm:grid-cols-3">
-                <Select
-                  value={line.medicineId}
-                  onChange={(e) => {
-                    const next = [...lines];
-                    next[i].medicineId = e.target.value;
-                    setLines(next);
-                  }}
-                >
-                  <option value="">Select medicine</option>
-                  {initialMedicines.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} (stock: {m.stockQuantity})
-                    </option>
-                  ))}
-                </Select>
-                <Input
-                  type="number"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(e) => {
-                    const next = [...lines];
-                    next[i].quantity = parseInt(e.target.value, 10);
-                    setLines(next);
-                  }}
-                />
-              </div>
-            ))}
-            <Button type="button" variant="ghost" onClick={() => setLines([...lines, { medicineId: "", quantity: 1 }])}>
-              + Add line
-            </Button>
+            {lines.map((line, i) => {
+              const selectedMed = initialMedicines.find((m) => m.id === line.medicineId);
+              return (
+                <div key={line.id} className="grid gap-4 sm:grid-cols-12 items-end border-b pb-4 sm:border-0 sm:pb-0">
+                  <div className="sm:col-span-7">
+                    <Label>Medicine (search or select)</Label>
+                    <div className="relative">
+                      <Input
+                        list={`med-list-${line.id}`}
+                        placeholder="Type medicine name..."
+                        value={line.search}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const med = initialMedicines.find((m) => m.name === val);
+                          const next = [...lines];
+                          next[i].search = val;
+                          next[i].medicineId = med ? med.id : "";
+                          setLines(next);
+                        }}
+                      />
+                      <datalist id={`med-list-${line.id}`}>
+                        {initialMedicines.map((m) => (
+                          <option key={m.id} value={m.name}>
+                            Stock: {m.stockQuantity} · {formatCurrency(m.retailPrice)}
+                          </option>
+                        ))}
+                      </datalist>
+                      {selectedMed && (
+                        <p className="absolute -bottom-5 left-0 text-[10px] text-accent font-medium">
+                          Selected: {selectedMed.name} (Available: {selectedMed.stockQuantity})
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={line.quantity}
+                      onChange={(e) => {
+                        const next = [...lines];
+                        next[i].quantity = parseInt(e.target.value, 10) || 0;
+                        setLines(next);
+                      }}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      onClick={() => {
+                        if (lines.length > 1) {
+                          setLines(lines.filter((l) => l.id !== line.id));
+                        } else {
+                          setLines([{ id: Math.random().toString(36).slice(2), medicineId: "", quantity: 1, search: "" }]);
+                        }
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-accent"
+                onClick={() => setLines([...lines, { id: Math.random().toString(36).slice(2), medicineId: "", quantity: 1, search: "" }])}
+              >
+                + Add another item
+              </Button>
+            </div>
             <Button type="submit">Create order & invoice</Button>
           </form>
         </Card>
       )}
 
       <div className="mt-6 space-y-4">
-        {initialOrders.length === 0 && (
+        {orders.length === 0 && (
           <EmptyState
             title="No orders yet"
             description="Create a manual sale or wait for client portal orders."
@@ -193,7 +246,7 @@ export function OrdersPage({
             actionHref="#"
           />
         )}
-        {initialOrders.map((o) => {
+        {orders.map((o) => {
           const expanded = expandedId === o.id;
           return (
             <Card key={o.id}>

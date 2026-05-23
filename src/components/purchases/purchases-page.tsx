@@ -29,13 +29,19 @@ export function PurchasesPage({
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
+  const [selectedMedicineId, setSelectedMedicineId] = useState("");
+  const [search, setSearch] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const data = Object.fromEntries(fd);
+    data.medicineId = selectedMedicineId;
+
     const res = await fetch("/api/purchases", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))),
+      body: JSON.stringify(data),
     });
     if (res.ok) {
       toast.success("Purchase recorded — stock updated");
@@ -68,13 +74,25 @@ export function PurchasesPage({
               </Select>
             </div>
             <div>
-              <Label>Medicine</Label>
-              <Select name="medicineId" required>
-                <option value="">Select</option>
+              <Label>Medicine (search or select)</Label>
+              <Input
+                list="med-list"
+                placeholder="Type medicine name..."
+                required
+                value={search}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const med = initialMedicines.find(m => m.name === val);
+                  setSearch(val);
+                  setSelectedMedicineId(med ? med.id : "");
+                }}
+              />
+              <datalist id="med-list">
                 {initialMedicines.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
+                  <option key={m.id} value={m.name} />
                 ))}
-              </Select>
+              </datalist>
+              <input type="hidden" name="medicineId" value={selectedMedicineId} />
             </div>
             <div><Label>Quantity received</Label><Input name="quantityReceived" type="number" min={1} required /></div>
             <div><Label>Cost price ETB (unit)</Label><Input name="costPrice" type="number" step="0.01" required /></div>

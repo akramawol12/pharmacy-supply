@@ -9,10 +9,13 @@ export async function GET() {
   const session = await requireSession();
   if (!session) return unauthorized();
 
-  const where =
-    session.user.role === Role.SUPPLIER && session.user.supplierId
-      ? { supplierId: session.user.supplierId }
-      : undefined;
+  let where: any = undefined;
+  if (session.user.role === Role.SUPPLIER) {
+    if (!session.user.supplierId) {
+      return NextResponse.json([]);
+    }
+    where = { supplierId: session.user.supplierId };
+  }
 
   const medicines = await prisma.medicine.findMany({
     where,

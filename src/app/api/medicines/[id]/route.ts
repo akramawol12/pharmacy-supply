@@ -19,12 +19,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const data = parsed.data;
+
+  // Pick only allowed fields for update to prevent mass assignment
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.manufacturer !== undefined) updateData.manufacturer = data.manufacturer;
+  if (data.retailPrice !== undefined) updateData.retailPrice = data.retailPrice;
+  if (data.wholesalePrice !== undefined) updateData.wholesalePrice = data.wholesalePrice;
+  if (data.stockQuantity !== undefined) updateData.stockQuantity = data.stockQuantity;
+  if (data.lowStockThreshold !== undefined) updateData.lowStockThreshold = data.lowStockThreshold;
+  if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
+
+  if (data.expiryDate !== undefined) {
+    updateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+  }
+
   const medicine = await prisma.medicine.update({
     where: { id },
-    data: {
-      ...data,
-      expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
-    },
+    data: updateData,
     include: { supplier: true },
   });
 
